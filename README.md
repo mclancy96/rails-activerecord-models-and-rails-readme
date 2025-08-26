@@ -28,12 +28,9 @@ more readable query.
 
 So if we have a database table, why do we need a model file? By using model
 files, we are able to create an organized layer of abstraction for our data. An
-important thing to remember is that at the end of the day the model file is a
-Ruby class. It will typically inherit from the `ActiveRecord::Base` class, which
-means that it has access to a number of methods that assist in working with the
-database. However, you can treat it like a regular Ruby class, allowing you to
-create methods, data attributes, and everything else that you would want to do
-in a class file.
+important thing to remember is that at the end of the day the model file is a Ruby class. Your models will inherit from the `ApplicationRecord` class. This may seem a bit unintuitive at first, but `ApplicationRecord` itself inherits from `ActiveRecord::Base`, which is the core class that provides all of Active Record's powerful features. This means that by inheriting from `ApplicationRecord`, your models automatically gain access to all the database-related methods and behaviors provided by Active Record, such as querying, validations, and associations.
+
+The use of `ApplicationRecord` as an intermediate class is a Rails convention that allows you to add shared logic for all your models in one place if needed, while still leveraging everything Active Record offers. However, you can still treat your model like a regular Ruby class, allowing you to create methods, data attributes, and everything else that you would want to do in a class file.
 
 A typical model file will contain code such as but not limited to the following:
 
@@ -67,19 +64,19 @@ here to demonstrate how this app was created.
 ```bash
 # the -T flag tells the Rails project generator not to
 # include TestUnit, the default testing framework:
-rails new rails-activerecord-models-and-rails-readme -T
+bin/rails new rails-activerecord-models-and-rails-readme -T
 
 # The Rails project generator created this directory for us:
 cd rails-activerecord-models-and-rails-readme
 
 # We modified the Gemfile to include
-# gem 'rspec-rails', '~> 4.0'
+# gem 'rspec-rails', '~> 6.0'
 # in the :development, :test group, then ran:
 
 bundle install
 
 # Finally, we created the initial RSpec config:
-rails g rspec:install
+bin/rails g rspec:install
 ```
 
 Let's create a new file: `spec/models/post_spec.rb`. In that file, place the following code:
@@ -92,7 +89,7 @@ describe Post do
 end
 ```
 
-If we run `bundle exec rspec`, it will throw an error since we don't have any
+If we run `bin/rspec`, it will throw an error since we don't have any
 code in the application for our `Post` model yet. To fix this, create a new file
 in the `app/models` directory called `post.rb`, and add the following code:
 
@@ -102,8 +99,8 @@ end
 ```
 
 This will get the tests passing, but it still has some weird errors because we
-need to create a schema file. You can do that by running `rake db:migrate`.
-(There is no need to create a database with `rake db:create` first. The test
+need to create a schema file. You can do that by running `bin/rails db:migrate`.
+(There is no need to create a database with `bin/rails db:create` first. The test
 suite will create a test database for us when we run our tests.) This will
 create the schema file and clear the warning. Now update the `Post` spec to test
 for a `Post` being created. It should look something like this:
@@ -122,7 +119,7 @@ posts. Create a new directory in the `db/` directory called `migrate`, and add a
 new file called `001_create_posts.rb`. To that file, add the following code:
 
 ```ruby
-class CreatePosts < ActiveRecord::Migration
+class CreatePosts < ActiveRecord::Migration[7.1]
   def change
     create_table :posts do |t|
       t.string :title
@@ -146,28 +143,29 @@ prepended with a timestamp value to make sure that we can run migrations in the
 order they were written.
 
 The timestamp also plays a role in making sure that only new migrations run when
-we run `rake db:migrate`. The `db/schema.rb` file is updated with a version number
+we run `bin/rails db:migrate`. The `db/schema.rb` file is updated with a version number
 corresponding to the timestamp of the last migration you ran. When you run
-`rake db:migrate` again, only migrations whose timestamps are greater than the
+`bin/rails db:migrate` again, only migrations whose timestamps are greater than the
 schema's version number will run. So, the numbers at the beginning of the filenames
 of your migrations are required so ActiveRecord can be sure to run each of your
 migrations just once and in the proper order.
 
-After running `rake db:migrate` we can see that our `db/schema.rb` file has been
+After running `bin/rails db:migrate` we can see that our `db/schema.rb` file has been
 updated with our new posts table. However, if we run our tests again we will
 still see them failing due to the same error: `` undefined method `create!' for Post:Class ``. This is because we left out one very important piece of code from
+
 the `Post` model. In order to leverage built-in methods such as `.create!`, we
-need to have the Post class inherit from `ActiveRecord::Base`. Update the
+need to have the Post class inherit from `ApplicationRecord`. Update the
 `post.rb` model file to match the following:
 
 ```ruby
-class Post < ActiveRecord::Base
-end
+  class Post < ApplicationRecord
+  end
 ```
 
 Now all of the tests are passing and we can create a new post correctly. Even
 though we know this is working because our tests are passing, let's still test
-this in the console. Open up the Rails console by running `rails console`.
+this in the console. Open up the Rails console by running `bin/rails console`.
 Running the console will load the entire Rails environment and give you command
 line access to the app and the database. The console is a powerful tool that you
 can leverage in order to test out scripts, methods, and database queries.
@@ -247,11 +245,11 @@ Also, if you are coming from other programming languages you may be wondering
 how exactly we are able to connect to the database automatically without having
 to create connection strings. The reason for this simplicity resides in the
 `config/database.yml` file that was generated when we created our application
-and ran `rake db:create`. In that file, you will see that the development, test,
+and ran `bin/rails db:create`. In that file, you will see that the development, test,
 and production databases are all configured. From that stage, the
 `ActiveRecord::Base.connection` method connects your application to the
 database, which is another benefit of having our model classes inherit from the
-`ActiveRecord::Base` module.
+`ApplicationRecord` class.
 
 Being able to work in different environments is one of the strong points of
 Rails, and the database.yml file takes advantage of this feature by having
